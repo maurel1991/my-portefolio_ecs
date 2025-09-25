@@ -47,7 +47,7 @@ jobs:
       - name: Push image to Amazon ECR
         run: |
           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
-          push the image
+          # push the image
           docker push $IMAGE_URI:${{ github.run_number }}
 
       # - name: Set image URI output
