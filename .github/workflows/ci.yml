@@ -49,8 +49,10 @@ jobs:
           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
           IMAGE_TAG="${{ github.run_number }}"
           # push the image
-          docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest 
+          docker push $IMAGE_URI:$IMAGE_TAG
+          docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
           docker push $IMAGE_URI:latest
+
 
       # - name: Set image URI output
       #   id: set-image-uri
