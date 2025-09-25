@@ -47,6 +47,9 @@ jobs:
       - name: Push image to Amazon ECR
         run: |
           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
+          # login to ECR
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/d5u4z1l0
+          push the image
           docker push $IMAGE_URI:${{ github.run_number }}
 
       # - name: Set image URI output
