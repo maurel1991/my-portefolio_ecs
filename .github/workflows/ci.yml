@@ -48,11 +48,10 @@ jobs:
         run: |
           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
           IMAGE_TAG="${{ github.run_number }}"
-          # push the image
+          # push both versioned and latest
           docker push $IMAGE_URI:$IMAGE_TAG
           docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
           docker push $IMAGE_URI:latest
-
 
       # - name: Set image URI output
       #   id: set-image-uri
@@ -64,7 +63,7 @@ jobs:
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v4
-
+  #
   #     - name: Deploy to EC2 via SSH
   #       uses: appleboy/ssh-action@v1
   #       with:
@@ -74,19 +73,18 @@ jobs:
   #         script: |
   #           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
   #           IMAGE_TAG=${{ github.run_number }}
-
+  #
   #           # Authenticate to ECR
   #           aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin $IMAGE_URI
-
+  #
   #           # Pull new image
   #           docker pull $IMAGE_URI:$IMAGE_TAG
-
+  #
   #           # Stop old container
   #           docker rm -f my-portfolio || true
-
+  #
   #           # Run new container
   #           docker run -d --name my-portfolio -p 8080:5001 $IMAGE_URI:$IMAGE_TAG
-
+  #
   #           # Verify
   #           docker ps
-
