@@ -59,34 +59,33 @@ jobs:
         id: set-image-uri
         run: |
           echo "IMAGE_URI=${{ secrets.AWS_IMAGE_URI }}:${{ github.run_number }}" >> $GITHUB_OUTPUT
-  # deploy-ec2:
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Deploy to EC2 via SSH
-  #       uses: appleboy/ssh-action@v1
-  #       with:
-  #         host: ${{ secrets.EC2_HOST }}          # Public IP or DNS
-  #         username: ${{ secrets.EC2_USER }}      # e.g., "ubuntu" or "ec2-user"
-  #         key: ${{ secrets.EC2_SSH_KEY }}        # Private key from GitHub Secrets
-  #         script: |
-  #           IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
-  #           IMAGE_TAG=${{ github.run_number }}
-  #
-  #           # Authenticate to ECR
-  #           aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin $IMAGE_URI
-  #
-  #           # Pull new image
-  #           docker pull $IMAGE_URI:$IMAGE_TAG
-  #
-  #           # Stop old container
-  #           docker rm -f my-portfolio || true
-  #
-  #           # Run new container
-  #           docker run -d --name my-portfolio -p 8080:5001 $IMAGE_URI:$IMAGE_TAG
-  #
-  #           # Verify
-  #           docker ps
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ vars.ECS_TASK_DEFINITION }} --query taskDefinition > task-definition.json
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          wait-for-service-stability: true
