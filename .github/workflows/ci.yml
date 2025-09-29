@@ -23,16 +23,17 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1   # public ECR is always us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Login to Amazon Public ECR
-        run: |
-          aws ecr-public get-login-password --region us-east-1 \
-            | docker login --username AWS --password-stdin public.ecr.aws
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: private
 
       - name: Build Docker Image
         run: |
-          IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
+          IMAGE_URI="${{ secrets.AWS_IMAGE_URI }}"
           docker build -t $IMAGE_URI:${{ github.run_number }} .
 
       - name: Scan Docker image with Trivy
@@ -40,24 +41,24 @@ jobs:
         with:
           image-ref: "${{ secrets.AWS_IMAGE_URI }}:${{ github.run_number }}"
           format: 'table'
-          exit-code: '0'       # Do NOT fail pipeline on HIGH/CRITICAL
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Push image to Amazon Public ECR
+      - name: Push image to Amazon ECR
         run: |
-          IMAGE_URI="${{ secrets.AWS_IMAGE_URI}}"
+          IMAGE_URI="${{ secrets.AWS_IMAGE_URI }}"
           IMAGE_TAG="${{ github.run_number }}"
           # push both versioned and latest
           docker push $IMAGE_URI:$IMAGE_TAG
           docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
           docker push $IMAGE_URI:latest
 
-      # - name: Set image URI output
-      #   id: set-image-uri
-      #   run: echo "IMAGE_URI=public.ecr.aws/xxxxxxx/my-portfolio" >> $GITHUB_OUTPUT
-
+      - name: Set image URI output
+        id: set-image-uri
+        run: |
+          echo "IMAGE_URI=${{ secrets.AWS_IMAGE_URI }}:${{ github.run_number }}" >> $GITHUB_OUTPUT
   # deploy-ec2:
   #   runs-on: ubuntu-latest
   #   needs: build
